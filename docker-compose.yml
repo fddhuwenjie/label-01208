@@ -1,0 +1,11 @@
+services:
+  lua-engine:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lua-script-engine
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./backend/scripts:/app/scripts:ro
+    restart: "no"
