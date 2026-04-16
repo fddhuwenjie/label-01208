@@ -85,3 +85,19 @@ TEST_F(NativeFunctionsTest, AllFunctionsRegistered) {
     lua_getglobal(L, "native_sleep");
     EXPECT_TRUE(lua_isfunction(L, -1));
 }
+
+TEST_F(NativeFunctionsTest, NativeSleepWithNegativeFails) {
+    EXPECT_FALSE(engine.executeString("native_sleep(-100)"));
+    EXPECT_FALSE(engine.getLastError().empty());
+    EXPECT_NE(engine.getLastError().find("sleep time cannot be negative"), std::string::npos);
+}
+
+TEST_F(NativeFunctionsTest, NativeAddWithTypeMismatchFails) {
+    EXPECT_FALSE(engine.executeString("native_add('string', 42)"));
+    EXPECT_FALSE(engine.getLastError().empty());
+}
+
+TEST_F(NativeFunctionsTest, NativePrintWithTypeMismatchFails) {
+    EXPECT_FALSE(engine.executeString("native_print(12345)"));
+    EXPECT_FALSE(engine.getLastError().empty());
+}

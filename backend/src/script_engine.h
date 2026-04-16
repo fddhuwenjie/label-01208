@@ -24,11 +24,19 @@ public:
     
     // Call Lua function from C++
     bool callFunction(const std::string& funcName);
+    template<typename... Args>
+    bool callFunction(const std::string& funcName, Args... args);
     
     lua_State* getLuaState() { return L; }
     std::string getLastError() const { return lastError; }
 
 private:
+    template<typename T>
+    void pushArg(T arg);
+    template<typename T, typename... Args>
+    void pushArgs(T first, Args... rest);
+    void pushArgs() {}
+
     lua_State* L;
     std::string lastError;
 };
