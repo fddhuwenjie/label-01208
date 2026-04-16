@@ -85,3 +85,14 @@ TEST_F(NativeFunctionsTest, AllFunctionsRegistered) {
     lua_getglobal(L, "native_sleep");
     EXPECT_TRUE(lua_isfunction(L, -1));
 }
+
+TEST_F(NativeFunctionsTest, NativeSleepWithNegativeNumberFails) {
+    EXPECT_FALSE(engine.executeString("native_sleep(-10)"));
+    EXPECT_FALSE(engine.getLastError().empty());
+    EXPECT_TRUE(engine.getLastError().find("cannot be negative") != std::string::npos);
+}
+
+TEST_F(NativeFunctionsTest, NativeSleepWithZeroWorks) {
+    EXPECT_TRUE(engine.executeString("native_sleep(0)"));
+    EXPECT_TRUE(engine.getLastError().empty());
+}
