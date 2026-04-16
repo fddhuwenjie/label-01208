@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include "script_engine.h"
+#include <fstream>
+#include <cstdio>
 
 class ScriptEngineTest : public ::testing::Test {
 protected:
@@ -69,4 +71,57 @@ TEST_F(ScriptEngineTest, TableOperations) {
     
     lua_getglobal(engine.getLuaState(), "sum");
     EXPECT_EQ(lua_tointeger(engine.getLuaState(), -1), 6);
+}
+
+TEST_F(ScriptEngineTest, LoadScriptWithSyntaxErrorFails) {
+    std::string badScriptPath = "bad_syntax.lua";
+    std::ofstream badScript(badScriptPath);
+    badScript << "function test() x = 1 + * 2 end";
+    badScript.close();
+    
+    EXPECT_FALSE(engine.loadScript(badScriptPath));
+    EXPECT_FALSE(engine.getLastError().empty());
+    
+    std::remove(badScriptPath.c_str());
+}
+
+TEST_F(ScriptEngineTest, RegisterSameNameFunctionOverwrites) {
+    auto func1 = [](lua_State* L) -> int {
+        lua_pushinteger(L, 1);
+        return 1;
+    };
+    
+    auto func2 = [](lua_State* L) -> int {
+        lua_pushinteger(L, 2);
+        return 1;
+    };
+    
+    engine.registerFunction("test_overwrite", func1);
+    EXPECT_TRUE(engine.executeString("result = test_overwrite()"));
+    lua_getglobal(engine.getLuaState(), "result");
+    EXPECT_EQ(lua_tointeger(engine.getLuaState(), -1), 1);
+    lua_pop(engine.getLuaState(), 1);
+    
+    engine.registerFunction("test_overwrite", func2);
+    EXPECT_TRUE(engine.executeString("result = test_overwrite()"));
+    lua_getglobal(engine.getLuaState(), "result");
+    EXPECT_EQ(lua_tointeger(engine.getLuaState(), -1), 2);
+}
+
+TEST_F(ScriptEngineTest, CallLuaFunctionWithTypeMismatchReturnsError) {
+    EXPECT_TRUE(engine.executeString(R"(
+        function add_numbers(a, b)
+            return a + b
+        end
+    )"));
+    
+    lua_State* L = engine.getLuaState();
+    lua_getglobal(L, "add_numbers");
+    lua_pushstring(L, "not a number");
+    lua_pushinteger(L, 2);
+    
+    EXPECT_NE(lua_pcall(L, 2, 1, 0), LUA_OK);
+    std::string error = lua_tostring(L, -1);
+    EXPECT_FALSE(error.empty());
+    lua_pop(L, 1);
 }
