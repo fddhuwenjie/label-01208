@@ -21,6 +21,10 @@ target_include_directories(lua_engine_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
 )
 
+target_compile_definitions(lua_engine_tests PRIVATE
+    TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 target_link_libraries(lua_engine_tests PRIVATE
     ${LUA_LIBRARIES}
     GTest::gtest_main

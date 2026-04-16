@@ -70,3 +70,66 @@ TEST_F(ScriptEngineTest, TableOperations) {
     lua_getglobal(engine.getLuaState(), "sum");
     EXPECT_EQ(lua_tointeger(engine.getLuaState(), -1), 6);
 }
+
+TEST_F(ScriptEngineTest, LoadScriptWithSyntaxErrorFails) {
+    std::string testFile = std::string(TEST_DATA_DIR) + "/syntax_error.lua";
+    EXPECT_FALSE(engine.loadScript(testFile));
+    EXPECT_FALSE(engine.getLastError().empty());
+    EXPECT_NE(engine.getLastError().find("syntax error"), std::string::npos);
+}
+
+TEST_F(ScriptEngineTest, RegisterSameNameFunctionOverwrites) {
+    auto firstFunc = [](lua_State* L) -> int {
+        lua_pushinteger(L, 1);
+        return 1;
+    };
+    auto secondFunc = [](lua_State* L) -> int {
+        lua_pushinteger(L, 2);
+        return 1;
+    };
+    
+    engine.registerFunction("test_overwrite", firstFunc);
+    EXPECT_TRUE(engine.executeString("result = test_overwrite()"));
+    lua_getglobal(engine.getLuaState(), "result");
+    EXPECT_EQ(lua_tointeger(engine.getLuaState(), -1), 1);
+    
+    engine.registerFunction("test_overwrite", secondFunc);
+    EXPECT_TRUE(engine.executeString("result = test_overwrite()"));
+    lua_getglobal(engine.getLuaState(), "result");
+    EXPECT_EQ(lua_tointeger(engine.getLuaState(), -1), 2);
+}
+
+TEST_F(ScriptEngineTest, CallLuaFunctionWithTypeMismatch) {
+    EXPECT_TRUE(engine.executeString(R"(
+        function add_numbers(a, b)
+            return a + b
+        end
+    )"));
+    
+    EXPECT_FALSE(engine.callFunction("add_numbers", "not a number", 42));
+    EXPECT_FALSE(engine.getLastError().empty());
+}
+
+TEST_F(ScriptEngineTest, CallLuaFunctionWithCorrectArgs) {
+    EXPECT_TRUE(engine.executeString(R"(
+        function sum(a, b)
+            result = a + b
+        end
+    )"));
+    
+    EXPECT_TRUE(engine.callFunction("sum", 10, 20));
+    lua_getglobal(engine.getLuaState(), "result");
+    EXPECT_EQ(lua_tointeger(engine.getLuaState(), -1), 30);
+}
+
+TEST_F(ScriptEngineTest, CallLuaFunctionWithStringArg) {
+    EXPECT_TRUE(engine.executeString(R"(
+        function greet(name)
+            greeting = "Hello, " .. name
+        end
+    )"));
+    
+    EXPECT_TRUE(engine.callFunction("greet", std::string("World")));
+    lua_getglobal(engine.getLuaState(), "greeting");
+    EXPECT_STREQ(lua_tostring(engine.getLuaState(), -1), "Hello, World");
+}
